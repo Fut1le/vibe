@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: 
+Host: lo-vibe.web.app
+Sitemap: http://lo-vibe.web.app/sitemap.xml

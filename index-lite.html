@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Immerse yourself in harmony and tranquility with our simple web app. Listen to relaxing music, jazz, lo-fi, and much more. Perfect for work, study, or meditation. Find your rhythm and create your own atmosphere for rest and focus, wherever you are." />
+    <meta name="keywords" content="Relaxing music, Vibe, Lo-fi, Jazz, Ambient, Chill, Sleepy, Meditation, Rest, Work, Study, Background music, Stress relief, Online radio, Calmness, Chillout, Sound therapy, Mindfulness, Harmony, Mood, Tranquility, Music for concentration, Расслабляющая музыка, Ло-фай, Джаз, Медитация, Отдых, Работа, Учёба, Фоновая музыка, Снятие стресса, Интернет-радио, Спокойствие, Чилаут, Звуковая терапия, Осознанность, Гармония, Настроение, Спокойствие, Музыка для концентрации, lo-vibe.web.app, vibe radio, vibe music" />
+    <meta property="og:image" content="https://firebasestorage.googleapis.com/v0/b/lo-vibe.appspot.com/o/art-new.png?alt=media&token=09b13931-518f-4562-bf2c-9ce053a838c8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="author" content="VL Software" />
+    <meta name="version" content="3.2" />
+    <title>Vibe | Ambient Radio</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="shortcut icon" href="art/ic.ico" type="image/png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" sizes="512x512" href="art/ic/icon-1.png">
+    
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const favicons = [
+          'art/ic/icon-1.png',
+          'art/ic/icon-2.png',
+          'art/ic/icon-3.png',
+          'art/ic/icon-4.png',
+        ];
+        
+        // Pick a random favicon from the array
+        const randomFavicon = favicons[Math.floor(Math.random() * favicons.length)];
+        
+        // Set the random favicon
+        let link = document.querySelector("link[rel~='icon']");
+        if (!link) {
+          link = document.createElement('link');
+          link.rel = 'icon';
+          document.getElementsByTagName('head')[0].appendChild(link);
+        }
+        link.href = randomFavicon;
+        
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('/js/service-worker.js')
+          .then(function(registration) {
+            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+          }, function(err) {
+            console.error('ServiceWorker registration failed: ', err);
+          });
+        }
+      });
+    </script>
+    <style>
+      canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        filter: blur(60px);
+        z-index: 0;
+      }
+      
+      #randomColors{
+        margin-top: 10px;
+      }
+      
+      #speed-color{
+        margin-top: 10px;
+      }
+      
+      #repulse{
+        margin-top: 10px;
+      }
+      
+      #red, #green, #blue{
+        margin-top: 5px;
+      }
+    </style>
+</head>
+  
+<body>
+  <div id="intro-screen">
+    <h1>VIBE</h1>
+  </div>
+  <div id="particles-js"></div>
+  <canvas id="particlesCanvas"></canvas>
+  
+  <!-- Radio -->
+  <audio id="lofi-radio" src="https://lofi.stream.laut.fm/lofi?ref=radiode&t302=2022-04-06_17-32-36&uuid=47bbcee5-a0bc-47c2-8475-72e9f74b865c"></audio> 
+  <!-- Timer Panel -->
+  <div class="clock" id="clock">
+    <div id="current-time" class="time"></div>
+    <div class="separator"></div>
+    <div id="current-date" class="date"></div>
+  </div>
+  
+  <div class="player-container" id="player-container">
+    <div class="hover-area" id="hover-area">
+      
+      <!-- Settings Panel -->
+      <div id="settings-panel" class="panel">
+        <div class="panel-title" id="special-panel-title">Settings</div>
+        <div id="line-2"></div>
+        <div class="scroll-view">
+          <div class="section-title"><b>Background</b></div>
+          <div class="mini-panel">
+            <div id="red" class="slider-container">
+              <label class="slider-label" for="rSlider">Red</label>
+              <input type="range" id="rSlider" min="0" max="255" value="0">
+            </div>
+            <div id="green" class="slider-container">
+              <label class="slider-label" for="gSlider">Green</label>
+              <input type="range" id="gSlider" min="0" max="255" value="255">
+            </div>
+            <div id="blue" class="slider-container">
+              <label class="slider-label" for="bSlider">Blue</label>
+              <input type="range" id="bSlider" min="0" max="255" value="128">
+            </div>
+            <button class="button" id="randomColors">Random</button>
+            <button class="button" id="toggleAutoSlide">Auto Slide: OFF</button>
+            <button class="button" id="toggleRainbow">Toggle Rainbow</button>
+            <div id="speed-color" class="slider-container">
+              <label class="slider-label" for="speedSlider">Color Speed</label>
+              <input type="range" id="speedSlider" min="0.001" max="0.008" step="0.001" value="0.005">
+            </div>
+            <div id="repulse" class="slider-container">
+              <label class="slider-label" for="repulseForceSlider">Repulse Force</label>
+              <input type="range" id="repulseForceSlider" min="0.1" max="10" step="0.1" value="1">
+              <span class="span" style='color:red;margin-right:1.25em; display:inline-block;'>&nbsp;</span>
+              <button class="button" id="toggleMouseInteraction">Mouse Interaction</button>
+            </div>
+          </div>
+          <div class="section-title"><b>Controls</b></div>
+          <div class="mini-panel">
+            <button class="button" id="panelHideToggle">Panel-hide: OFF</button>
+            <button class="button" id="toggleButton" onclick="toggleClockMode()">Toggle Clock</button>
+            <button class="button" id="toggle-search">YouTube: Hidden</button>
+          </div>
+          
+          <div class="mini-panel">
+            <button class="button" id="fullscreenButton">Fullscreen</button>
+            <button class="button" onclick="redirectToIndexLite()">Main Version</button>
+            <button class="button" id="snow-toggle">Snow ❄️</button>
+            <script>
+              function redirectToIndexLite() {
+                window.location.href = 'index.html';
+              }
+            </script>
+          </div>
+        </div>
+      </div>
+      
+      
+      <!-- Volume Panel -->
+      <div id="volume-panel" class="panel">
+        <div class="panel-title">Music</div>
+        <div id="line-2"></div>
+        <div class="scroll-view">
+          <div class="section-title"><b>Volume</b></div>
+          <div class="mini-panel">
+            <div class="panel-content">
+              <input id="volume-slider" class="slider-vol" type="range" min="0" max="100" value="100">
+            </div>
+            <div class="radio-controls">
+              <button class="button" id="prev-radio">&larr;</button>
+              <div id="radio-display" class="radio-display">RELAX 1</div>
+              <button class="button" id="next-radio">&rarr;</button>
+            </div>
+          </div>
+          
+          <div class="mini-panel" id="youtube-controls">
+            <div class="input-container">
+              <input type="text" id="youtube-input" class="translucent-input" placeholder="YouTube URL..." />
+              <button class="refresh-button" id="refresh-button"><i class="fas fa-refresh"></i></button>
+            </div>
+            <button class="translucent-button" id="youtube-submit">Play YouTube Audio</button>
+            <button class="translucent-button" id="youtube-shuffle">Non-stop Shuffle: OFF</button>
+            <div id="youtube-player"></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Mixer Panel -->
+      <div id="mixer-panel" class="panel">
+        <div class="panel-title">Ambient Mixer</div>
+        <div id="line"></div>
+        <button class="button" id="mute-all-button">Mute All</button>
+        <div class="panel-content scroll-view" id="amb-scroll-view">
+          <div class="mini-panel" id="preset-panel">
+            <div id="preset-scroll-view" class="preset-scroll-view">
+              <button class="button" id="export-button">Export Presets</button>
+              <button class="button" id="import-button">Import Presets</button>
+              <button class="preset-button" id="add-preset-button">+</button>
+            </div>
+          </div>
+          <div class="sound-button" data-sound-id="1">
+            <i class="fas fa-tree"></i> Forest 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/forest.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="2">
+            <i class="fas fa-star"></i> Night 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/night.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="3">
+            <i class="fas fa-fire"></i> Fire 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/fire.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="4">
+            <i class="fas fa-snowflake"></i> Snow 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/snow.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="5">
+            <i class="fas fa-water"></i> Rain 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/rain.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="6">
+            <i class="fas fa-water"></i> Seaside 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/seaside.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="7">
+            <i class="fas fa-shower"></i> Water 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/water.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="8">
+            <i class="fas fa-cloud"></i> Thunder 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/thunder.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="9">
+            <i class="fas fa-cloud"></i> Wind 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/wind.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="10">
+            <i class="fas fa-car"></i> Car 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/car.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="11">
+            <i class="fas fa-train"></i> Train 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/train.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="12">
+            <i class="fas fa-plane"></i> Airplane 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/airplane.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="13">
+            <i class="fas fa-ship"></i> Ship 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/creaking_ship.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="14">
+            <i class="fas fa-anchor"></i> Submarine 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/ocean.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="15">
+            <i class="fas fa-users"></i> Office 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/office.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="16">
+            <i class="fas fa-coffee"></i> Cafeteria 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/coffee_shop.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="17">
+            <i class="fas fa-commenting"></i> Chat 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/conversation.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="18">
+            <i class="fas fa-paw"></i> Wolf 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/wolf.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="19">
+            <i class="fas fa-paw"></i> Cat 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/cat.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="29">
+            <i class="fas fa-paw"></i> Birds 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/birds.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="20">
+            <i class="fas fa-paw"></i> Crickets 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/crickets.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="21">
+            <i class="fas fa-paw"></i> Seagulls 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/seagulls.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="22">
+            <i class="fas fa-paw"></i> Owl 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/owl.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="28">
+            <i class="fas fa-leaf"></i> Leaves 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/leaves.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="23">
+            <i class="fas fa-bell"></i> Chimes 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/chimes.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="24">
+            <i class="fas fa-heartbeat"></i> Heartbeat 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/heartbeat.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="25">
+            <i class="fas fa-bullseye"></i> Vinyl 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/vinyl.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="26">
+            <i class="fas fa-lightbulb"></i> Lamp 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/lamp.mp3" loop></audio>
+          </div>
+          <div class="sound-button" data-sound-id="27">
+            <i class="fas fa-clock"></i> Clock 
+            <input class="slider" id="amb-slider" type="range" min="0" max="100" value="0">
+            <audio src="sounds/clock.mp3" loop></audio>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Timer Panel -->
+      <div id="timer-panel" class="panel">
+        <div class="panel-title">Sleep Timer</div>
+        <div id="line-2"></div>
+        <p id="timer-display" class="timer-display">0:00</p>
+        <div class="scroll-view">
+          <div class="panel-content">
+            <button class="button" id="timer-toggle-button">ON</button>
+            <div class="timer-controls scroll-view">
+              <div class="button-group">                      
+                <button class="button" onclick="subtractTime(5)">-</button>
+                <span class="timer-span">5 min</span>
+                <button class="button" onclick="addTime(5)">+</button>
+              </div>
+              <div class="button-group">
+                <button class="button" onclick="subtractTime(15)">-</button>
+                <span class="timer-span">15 min</span>
+                <button class="button" onclick="addTime(15)">+</button>
+              </div>
+              <div class="button-group">
+                <button class="button" onclick="subtractTime(30)">-</button>
+                <span class="timer-span">30 min</span>
+                <button class="button" onclick="addTime(30)">+</button>
+              </div>
+              <div class="button-group">
+                <button class="button" onclick="subtractTime(60)">-</button>
+                <span class="timer-span">1 hour</span>
+                <button class="button" onclick="addTime(60)">+</button>
+              </div>
+              <div class="button-group">
+                <button class="button" onclick="subtractTime(120)">-</button>
+                <span class="timer-span">2 hours</span>
+                <button class="button" onclick="addTime(120)">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Control Buttons -->
+      <div class="controls">
+        <a id="play-button" class="button" aria-label="Play">
+          <i id="play-icon" class="fas fa-play"></i>
+        </a>
+        <a id="volume-button" class="button" aria-label="Volume">
+          <i id="volume-icon" class="fas fa-volume-up"></i>
+        </a>
+        <a id="mixer-button" class="button" aria-label="Mixer">
+          <i id="mixer-icon" class="fas fa-sliders-h"></i>
+        </a>
+        <a id="timer-button" class="button" aria-label="Timer">
+          <i id="timer-icon" class="fas fa-clock"></i>
+        </a>
+        <a id="settings-button" class="button" aria-label="Lava Lamp">
+          <i class="fas fa-cog"></i>
+        </a>          
+      </div>
+    </div> 
+  </div>
+  <script>
+    const canvas = document.getElementById('particlesCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    const rSlider = document.getElementById('rSlider');
+    const gSlider = document.getElementById('gSlider');
+    const bSlider = document.getElementById('bSlider');
+    const randomColorsBtn = document.getElementById('randomColors');
+    const toggleRainbowBtn = document.getElementById('toggleRainbow');
+    const toggleMouseInteractionBtn = document.getElementById('toggleMouseInteraction');
+    const speedSlider = document.getElementById('speedSlider');
+    const repulseForceSlider = document.getElementById('repulseForceSlider');
+    
+    const particles = [];
+    const maxParticles = 50;
+    let useRainbow = JSON.parse(localStorage.getItem('useRainbow') || 'false');
+    let useMouseInteraction = JSON.parse(localStorage.getItem('useMouseInteraction')) || false;
+    let colorTransitionSpeed = parseFloat(localStorage.getItem('colorTransitionSpeed') || '0.01');
+    let repulseForce = parseFloat(localStorage.getItem('repulseForce') || '1');
+    let mouse = { x: null, y: null };
+    let lastMouse = { x: null, y: null };
+    let mouseVelocity = 0;
+    
+    window.addEventListener("resize", () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+    
+    window.addEventListener('mousemove', (event) => {
+      if (lastMouse.x !== null && lastMouse.y !== null) {
+        let dx = event.x - lastMouse.x;
+        let dy = event.y - lastMouse.y;
+        mouseVelocity = Math.sqrt(dx * dx + dy * dy);
+      }
+      
+      mouse.x = event.x;
+      mouse.y = event.y;
+      lastMouse.x = event.x;
+      lastMouse.y = event.y;
+    });
+    
+    window.addEventListener('mouseout', () => {
+      mouse.x = null;
+      mouse.y = null;
+      lastMouse.x = null;
+      lastMouse.y = null;
+      mouseVelocity = 0;
+    });
+    
+    class Particle {
+      constructor() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.radius = Math.random() * 80 + 30;
+        this.defaultRadius = this.radius;
+        this.color = this.randomColor();
+        this.nextColor = this.randomColor();
+        this.colorProgress = 0;
+        this.dx = (Math.random() - 0.5) * 2; // Плавное движение
+        this.dy = (Math.random() - 0.5) * 2; // Плавное движение
+      }
+      
+      randomColor() {
+        const baseR = parseInt(rSlider.value);
+        const baseG = parseInt(gSlider.value);
+        const baseB = parseInt(bSlider.value);
+        const variation = (Math.random() * repulseForce * 2) - repulseForce; // Отклонение на основе repulseForce
+        
+        if (useRainbow) {
+          const r = Math.floor(Math.random() * 256);
+          const g = Math.floor(Math.random() * 256);
+          const b = Math.floor(Math.random() * 256);
+          return { r, g, b };
+        } else {
+          return {
+            r: Math.min(255, Math.max(0, baseR + variation)),
+            g: Math.min(255, Math.max(0, baseG + variation)),
+            b: Math.min(255, Math.max(0, baseB + variation))
+          };
+        }
+      }
+      
+      interpolateColor() {
+        this.colorProgress += colorTransitionSpeed;
+        if (this.colorProgress >= 1) {
+          this.colorProgress = 0;
+          this.color = this.nextColor;
+          this.nextColor = this.randomColor();
+        }
+        
+        const r = this.color.r + (this.nextColor.r - this.color.r) * this.colorProgress;
+        const g = this.color.g + (this.nextColor.g - this.color.g) * this.colorProgress;
+        const b = this.color.b + (this.nextColor.b - this.color.b) * this.colorProgress;
+        
+        return `rgba(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)}, 0.6)`;
+      }
+      
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.interpolateColor();
+        ctx.fill();
+        ctx.closePath();
+      }
+      
+      update() {
+        this.x += this.dx;
+        this.y += this.dy;
+        
+        if (this.x + this.radius > canvas.width || this.x - this.radius < 0) {
+          this.dx = -this.dx;
+        }
+        
+        if (this.y + this.radius > canvas.height || this.y - this.radius < 0) {
+          this.dy = -this.dy;
+        }
+        
+        // Мягкое отталкивание мыши, если включена эта опция
+        if (useMouseInteraction && mouse.x && mouse.y) {
+          const dx = this.x - mouse.x;
+          const dy = this.y - mouse.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          
+          if (distance < 200) {
+            const angle = Math.atan2(dy, dx);
+            const force = (mouseVelocity / 200); // Слабое воздействие от мыши
+            this.dx += Math.cos(angle) * force;
+            this.dy += Math.sin(angle) * force;
+          }
+        }
+        
+        this.draw();
+      }
+    }
+    
+    function init() {
+      for (let i = 0; i < maxParticles; i++) {
+        particles.push(new Particle());
+      }
+      
+      rSlider.value = localStorage.getItem('rColor') || 0;
+      gSlider.value = localStorage.getItem('gColor') || 255;
+      bSlider.value = localStorage.getItem('bColor') || 128;
+      speedSlider.value = localStorage.getItem('colorTransitionSpeed') || 0.01;
+      repulseForceSlider.value = localStorage.getItem('repulseForce') || 1;
+      useRainbow = JSON.parse(localStorage.getItem('useRainbow') || 'false');
+    }
+    
+    randomColorsBtn.addEventListener('click', () => {
+      rSlider.value = Math.floor(Math.random() * 256);
+      gSlider.value = Math.floor(Math.random() * 256);
+      bSlider.value = Math.floor(Math.random() * 256);
+      saveColorSettings();
+    });
+    
+    toggleRainbowBtn.addEventListener('click', () => {
+      useRainbow = !useRainbow;
+      localStorage.setItem('useRainbow', JSON.stringify(useRainbow));
+    });
+    
+    toggleMouseInteractionBtn.addEventListener('click', () => {
+      useMouseInteraction = !useMouseInteraction;
+      localStorage.setItem('useMouseInteraction', JSON.stringify(useMouseInteraction));
+    });
+    
+    function saveColorSettings() {
+      localStorage.setItem('rColor', rSlider.value);
+      localStorage.setItem('gColor', gSlider.value);
+      localStorage.setItem('bColor', bSlider.value);
+    }
+    
+    rSlider.addEventListener('input', saveColorSettings);
+    gSlider.addEventListener('input', saveColorSettings);
+    bSlider.addEventListener('input', saveColorSettings);
+    
+    speedSlider.addEventListener('input', () => {
+      colorTransitionSpeed = parseFloat(speedSlider.value);
+      localStorage.setItem('colorTransitionSpeed', speedSlider.value);
+    });
+    
+    repulseForceSlider.addEventListener('input', () => {
+      repulseForce = parseFloat(repulseForceSlider.value);
+      localStorage.setItem('repulseForce', repulseForceSlider.value);
+    });
+    
+    function connectParticles() {
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          
+          if (distance < 200) {
+            ctx.beginPath();
+            ctx.strokeStyle = particles[i].interpolateColor();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.stroke();
+            ctx.closePath();
+          }
+        }
+      }
+    }
+    
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      for (let i = 0; i < particles.length; i++) {
+        particles[i].update();
+      }
+      
+      connectParticles();
+      requestAnimationFrame(animate);
+    }
+    
+    init();
+    animate();
+  </script>
+  <script>
+    // JavaScript Part
+    let autoSlide = false;
+    const sliders = [
+      { element: 'rSlider', min: 50 },  // Красный слайдер не может быть меньше 50, если включен
+      { element: 'gSlider', min: 100 }, // Зеленый слайдер не может быть меньше 100, если включен
+      { element: 'bSlider', min: 75 }   // Синий слайдер не может быть меньше 75, если включен
+    ];
+    
+    document.getElementById('toggleAutoSlide').addEventListener('click', () => {
+      autoSlide = !autoSlide;
+      document.getElementById('toggleAutoSlide').innerText = `Auto Slide: ${autoSlide ? 'ON' : 'OFF'}`;
+      
+      if (autoSlide) {
+        autoSlideSliders();
+      }
+    });
+    
+    function getRandomOffset() {
+      const randomRange = Math.floor(Math.random() * 101) + 5; // Random number between 5 and 105
+      return Math.floor(Math.random() * (randomRange * 2 + 1)) - randomRange; // Random number between -randomRange and +randomRange
+    }
+    
+    function autoSlideSliders() {
+      if (autoSlide) {
+        sliders.forEach(sliderData => {
+          const slider = document.getElementById(sliderData.element);
+          const currentValue = parseInt(slider.value);
+          
+          if (currentValue > 0) {  // Только если слайдер включен (т.е. значение больше 0)
+            let targetValue = currentValue + getRandomOffset();
+            targetValue = Math.max(sliderData.min, Math.min(255, targetValue)); // Keep within [sliderData.min, 255]
+            
+            let step = (targetValue - currentValue) / 40; // Уменьшили количество шагов для ускоренного плавного изменения
+            let currentStep = 0;
+            
+            function smoothStep() {
+              if (currentStep <= 50) {
+                slider.value = Math.round(currentValue + step * currentStep);
+                currentStep++;
+                requestAnimationFrame(smoothStep);
+              }
+            }
+            
+            smoothStep();
+          }
+        });
+        
+        setTimeout(autoSlideSliders, Math.floor(Math.random() * 5001) + 5000); // Random interval [5000, 10000] ms
+      }
+    }
+  </script>
+  <script>
+    let clockMode = localStorage.getItem('clockMode') || '1';
+    let timeoutId;
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      const clock = document.getElementById('clock');
+      const toggleButton = document.getElementById('toggleButton');
+      
+      updateClock();
+      setInterval(updateClock, 60000); // обновляем каждую минуту
+      
+      setTimeout(() => {
+        document.addEventListener('mousemove', handleMouseMove);
+        
+        if (clockMode === '3') {
+          clock.classList.add('show');
+        }
+      }, 3000); // Задержка 3 секунды при загрузке страницы
+      
+      updateButtonLabel();
+    });
+    
+    function updateClock() {
+      let now = new Date();
+      let timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      let dateString = now.toLocaleDateString();
+      document.getElementById('current-time').textContent = timeString;
+      document.getElementById('current-date').textContent = dateString;
+    }
+    
+    function handleMouseMove(e) {
+      const clock = document.getElementById('clock');
+      if (e.clientY < 50 && clockMode === '2') {
+        clearTimeout(timeoutId);
+        clock.classList.add('show');
+        timeoutId = setTimeout(() => {
+          clock.classList.remove('show');
+        }, 3000); // 3 секунды задержка
+      }
+    }
+    
+    function toggleClockMode() {
+      const clock = document.getElementById('clock');
+      clock.classList.remove('show');
+      
+      clockMode = ((parseInt(clockMode) % 3) + 1).toString();
+      localStorage.setItem('clockMode', clockMode);
+      updateButtonLabel();
+      
+      if (clockMode === '3') {
+        clock.classList.add('show');
+      }}
+    
+    function updateButtonLabel() {
+      const toggleButton = document.getElementById('toggleButton');
+      switch (clockMode) {
+        case '1':
+          toggleButton.textContent = 'Clock Mode: Hidden';
+          break;
+        case '2':
+          toggleButton.textContent = 'Clock Mode: Auto';
+          break;
+        case '3':
+          toggleButton.textContent = 'Clock Mode: Visible';
+          break;
+      }
+    }
+  </script>  
+  <script>
+    document.addEventListener('DOMContentLoaded', (event) => {
+      const specialPanelTitle = document.getElementById('special-panel-title');
+      const version = document.querySelector('meta[name="version"]').content;
+      const originalText = specialPanelTitle.textContent;
+      let clickCount = 0;
+      let vibrationCount = 0;
+      
+      specialPanelTitle.addEventListener('mouseenter', () => {
+        specialPanelTitle.textContent = `Version: ${version}`;
+      });
+      
+      specialPanelTitle.addEventListener('mouseleave', () => {
+        specialPanelTitle.textContent = originalText;
+      });
+      
+      specialPanelTitle.addEventListener('click', () => {
+        clickCount++;
+        vibrationCount++;
+        
+        if (vibrationCount === 3) {
+          if (navigator.vibrate) {
+            navigator.vibrate(200); // Вибрация на 200 мс
+          }
+          vibrationCount = 0; // Сброс счетчика вибрации после 3-х нажатий
+        }
+        
+        if (clickCount === 100) {
+          window.open('https://lo-vibe.web.app/art/bg.html', '_blank');
+          clickCount = 0; // Сброс счетчика после открытия URL
+        }
+      });
+    });
+  </script>
+  <script>
+    // Функция для определения, является ли устройство iOS
+    function isIOS() {
+      // Используем userAgent, чтобы определить платформу
+      const userAgent = window.navigator.userAgent;
+      const iOSPattern = /iPad|iPhone|iPod/;
+      
+      return iOSPattern.test(userAgent);
+    }
+    
+    // Функция для отображения диалогового окна, если устройство - iOS
+    function displayDialogIfIOS() {
+      if (isIOS()) {
+        alert("Данная версия сайта не адаптирована под iOS. Веб-приложение может работать некорректно.");
+      }
+    }
+    
+    // Вызываем функцию после загрузки страницы
+    window.onload = displayDialogIfIOS;
+  </script>
+  <script src="js/script.js"></script>
+  <script src="js/fullscreen.js"></script>
+  <script src="js/show-container.js"></script>
+  <script src="js/loader.js"></script>
+  <script src="js/snow.js"></script>
+  <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+  <script src="https://www.youtube.com/iframe_api"></script>
+</body>
+</html>

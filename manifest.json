@@ -1,0 +1,15 @@
+{
+  "name": "Vibe Radio",
+  "short_name": "Vibe",
+  "start_url": "https://lo-vibe.web.app/index-lite.html",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "art/ic/icon-3.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}

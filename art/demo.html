@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Эфирная Анимация</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #000000;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        
+        .canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            z-index: 2;
+        }
+        
+        .control-panel {
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            backdrop-filter: blur(5px);
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .control-group label {
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #ccc;
+            white-space: nowrap;
+        }
+        
+        .control-group input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #6366f1;
+            cursor: pointer;
+        }
+        
+        .title {
+            position: fixed;
+            top: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            z-index: 2;
+            font-size: 1.5rem;
+            font-weight: 300;
+            color: rgba(255, 255, 255, 0.8);
+            text-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+        }
+        
+        @media (max-width: 600px) {
+            .control-panel {
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+            }
+            
+            .title {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="title">ЭФИРНАЯ АНИМАЦИЯ</div>
+    
+    <div class="canvas-container">
+        <canvas id="glCanvas"></canvas>
+    </div>
+    
+    <div class="controls">
+        <div class="control-panel">
+            <div class="control-group">
+                <input type="checkbox" id="activeReminders" onchange="updateUniforms()">
+                <label for="activeReminders">Синяя цветовая схема</label>
+            </div>
+            <div class="control-group">
+                <input type="checkbox" id="upcomingReminders" onchange="updateUniforms()">
+                <label for="upcomingReminders">Зеленая цветовая схема</label>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Конфигурация WebGL
+        let gl;
+        let program;
+        let startTime;
+        let mouseX = 0;
+        let mouseY = 0;
+        
+        // Вершинный шейдер
+        const vertexShader = `
+            attribute vec4 aVertexPosition;
+            attribute vec2 aTextureCoord;
+            varying vec2 vTextureCoord;
+            void main() {
+                gl_Position = aVertexPosition;
+                vTextureCoord = aTextureCoord;
+            }
+        `;
+
+        // Эфирный фрагментный шейдер (центрированный)
+        const etherFragmentShader = `
+            precision mediump float;
+            uniform vec2 iResolution;
+            uniform float iTime;
+            uniform vec2 iMouse;
+            uniform bool hasActiveReminders;
+            uniform bool hasUpcomingReminders;
+            varying vec2 vTextureCoord;
+
+            #define t iTime
+            mat2 m(float a){float c=cos(a), s=sin(a);return mat2(c,-s,s,c);}
+            float map(vec3 p, bool isActive, bool isUpcoming){
+                p.xz*= m(t*0.4);p.xy*= m(t*0.3);
+                vec3 q = p*2.+t;
+                return length(p+vec3(sin(t*0.7)))*log(length(p)+1.) + sin(q.x+sin(q.z+sin(q.y)))*0.5 - 1.;
+            }
+
+            void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+                // Центрируем координаты
+                vec2 uv = (2.0 * fragCoord - iResolution.xy) / min(iResolution.x, iResolution.y);
+                
+                vec3 cl = vec3(0.);
+                float d = 2.5;
+                
+                for(int i=0; i<=5; i++) {
+                    vec3 p3d = vec3(0,0,5.) + normalize(vec3(uv, -1.))*d;
+                    float rz = map(p3d, hasActiveReminders, hasUpcomingReminders);
+                    float f = clamp((rz - map(p3d+.1, hasActiveReminders, hasUpcomingReminders))*0.5, -.1, 1.);
+                    
+                    vec3 baseColor;
+                    if(hasActiveReminders) {
+                        baseColor = vec3(0.05, 0.2, 0.5) + vec3(4.0, 2.0, 5.0)*f;
+                    } else if(hasUpcomingReminders) {
+                        baseColor = vec3(0.05, 0.3, 0.1) + vec3(2.0, 5.0, 1.0)*f;
+                    } else {
+                        baseColor = vec3(0.1, 0.3, 0.4) + vec3(5.0, 2.5, 3.0)*f;
+                    }
+                    
+                    cl = cl*baseColor + smoothstep(2.5, .0, rz)*.7*baseColor;
+                    d += min(rz, 1.);
+                }
+                
+                float mouseInfluence = 0.0;
+                if(iMouse.x > 0.0 || iMouse.y > 0.0) {
+                    vec2 mousePos = (2.0 * iMouse.xy - iResolution.xy) / min(iResolution.x, iResolution.y);
+                    float mouseDist = length(uv - mousePos);
+                    mouseInfluence = smoothstep(0.6, 0.0, mouseDist);
+                    
+                    if(hasActiveReminders) {
+                        cl += vec3(0.2, 0.4, 1.0) * mouseInfluence * 0.3;
+                    } else if(hasUpcomingReminders) {
+                        cl += vec3(0.2, 1.0, 0.4) * mouseInfluence * 0.3;
+                    } else {
+                        cl += vec3(0.5, 0.3, 0.7) * mouseInfluence * 0.3;
+                    }
+                }
+                
+                fragColor = vec4(cl, 1.0);
+            }
+
+            void main() {
+                vec2 fragCoord = vTextureCoord * iResolution;
+                vec4 color;
+                mainImage(color, fragCoord);
+                gl_FragColor = color;
+            }
+        `;
+
+        // Инициализация WebGL
+        function initWebGL() {
+            const canvas = document.getElementById('glCanvas');
+            gl = canvas.getContext('webgl');
+            
+            if (!gl) {
+                alert('WebGL не поддерживается в вашем браузере!');
+                return;
+            }
+
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Обработчики мыши
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mouseenter', handleMouseEnter);
+            canvas.addEventListener('mouseleave', handleMouseLeave);
+            
+            startTime = Date.now();
+            setupShaders();
+            render();
+        }
+
+        // Настройка размера canvas
+        function resizeCanvas() {
+            const canvas = document.getElementById('glCanvas');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            if (gl) {
+                gl.viewport(0, 0, canvas.width, canvas.height);
+                updateUniforms();
+            }
+        }
+
+        // Обработка движения мыши
+        function handleMouseMove(event) {
+            const canvas = document.getElementById('glCanvas');
+            const rect = canvas.getBoundingClientRect();
+            mouseX = event.clientX - rect.left;
+            mouseY = event.clientY - rect.top;
+        }
+
+        function handleMouseEnter() {
+            // Курсор мыши внутри canvas
+        }
+
+        function handleMouseLeave() {
+            // Сброс позиции мыши при выходе за пределы canvas
+            mouseX = 0;
+            mouseY = 0;
+        }
+
+        // Компиляция шейдера
+        function compileShader(source, type) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error('Ошибка компиляции шейдера:', gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+            
+            return shader;
+        }
+
+        // Настройка шейдеров
+        function setupShaders() {
+            const vs = compileShader(vertexShader, gl.VERTEX_SHADER);
+            const fs = compileShader(etherFragmentShader, gl.FRAGMENT_SHADER);
+            
+            if (!vs || !fs) return;
+            
+            program = gl.createProgram();
+            gl.attachShader(program, vs);
+            gl.attachShader(program, fs);
+            gl.linkProgram(program);
+            
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                console.error('Ошибка линковки программы:', gl.getProgramInfoLog(program));
+                return;
+            }
+            
+            gl.useProgram(program);
+            
+            // Настройка геометрии (квадрат, покрывающий весь экран)
+            const vertices = new Float32Array([
+                -1, -1, 0, 0,
+                 1, -1, 1, 0,
+                -1,  1, 0, 1,
+                 1,  1, 1, 1
+            ]);
+            
+            const buffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+            gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+            
+            const positionLocation = gl.getAttribLocation(program, 'aVertexPosition');
+            const texCoordLocation = gl.getAttribLocation(program, 'aTextureCoord');
+            
+            gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 16, 0);
+            gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, 16, 8);
+            
+            gl.enableVertexAttribArray(positionLocation);
+            gl.enableVertexAttribArray(texCoordLocation);
+            
+            updateUniforms();
+        }
+
+        // Обновление uniform переменных
+        function updateUniforms() {
+            if (!program) return;
+            
+            const canvas = document.getElementById('glCanvas');
+            const resolutionUniform = gl.getUniformLocation(program, 'iResolution');
+            gl.uniform2f(resolutionUniform, canvas.width, canvas.height);
+            
+            const mouseUniform = gl.getUniformLocation(program, 'iMouse');
+            gl.uniform2f(mouseUniform, mouseX, canvas.height - mouseY);
+            
+            const activeReminders = document.getElementById('activeReminders').checked;
+            const upcomingReminders = document.getElementById('upcomingReminders').checked;
+            
+            const activeUniform = gl.getUniformLocation(program, 'hasActiveReminders');
+            const upcomingUniform = gl.getUniformLocation(program, 'hasUpcomingReminders');
+            
+            gl.uniform1i(activeUniform, activeReminders);
+            gl.uniform1i(upcomingUniform, upcomingReminders);
+        }
+
+        // Основной цикл рендеринга
+        function render() {
+            if (!program) return;
+            
+            const timeUniform = gl.getUniformLocation(program, 'iTime');
+            const currentTime = (Date.now() - startTime) / 1000;
+            gl.uniform1f(timeUniform, currentTime);
+            
+            gl.clearColor(0, 0, 0, 1);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            
+            requestAnimationFrame(render);
+        }
+
+        // Запуск при загрузке страницы
+        window.addEventListener('load', initWebGL);
+    </script>
+</body>
+</html>
